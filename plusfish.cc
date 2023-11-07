@@ -214,28 +214,48 @@ void Plusfish::Run() {
     }
 
     running_requests = http_client_->Poll();
+
     if (absl::GetFlag(FLAGS_enable_console_reporting)) {
-      const auto& issue_counters = datastore_->issue_count_per_severity();
-      printf(
-          "%s%s Plusfish scan statistics%s\n\n"
-          "        Request Queue : %u running, %u pending, %u done\n"
-          "          Audit Queue : %u pending, %u runners\n"
-          "               Issues : %u critical, %u high, %u medium, %u low\n"
-          "        Hidden object : %u found, %u URLs pending, %u req queue "
-          "size\n",
-          kTermClearScreen, kTermBold, kTermColorReset,
-          (uint32_t)http_client_->active_requests_count(),
-          (uint32_t)http_client_->schedule_queue_size(),
-          (uint32_t)http_client_->requests_performed_count(),
-          (uint32_t)datastore_->audit_queue_size(),
-          selective_auditor_ ? (uint32_t)selective_auditor_->runner_count() : 0,
-          issue_counters.find(Severity::CRITICAL)->second,
-          issue_counters.find(Severity::HIGH)->second,
-          issue_counters.find(Severity::MODERATE)->second,
-          issue_counters.find(Severity::LOW)->second,
-          (uint32_t)objects_finder_->num_objects_found(),
-          (uint32_t)objects_finder_->pending_urls_count(),
-          (uint32_t)objects_finder_->test_urls_queue_count());
+      if (objects_finder_) {
+        const auto& issue_counters = datastore_->issue_count_per_severity();
+        printf(
+            "%s%s Plusfish scan statistics%s\n\n"
+            "        Request Queue : %u running, %u pending, %u done\n"
+            "          Audit Queue : %u pending, %u runners\n"
+            "               Issues : %u critical, %u high, %u medium, %u low\n"
+            "        Hidden object : %u found, %u URLs pending, %u req queue "
+            "size\n",
+            kTermClearScreen, kTermBold, kTermColorReset,
+            (uint32_t)http_client_->active_requests_count(),
+            (uint32_t)http_client_->schedule_queue_size(),
+            (uint32_t)http_client_->requests_performed_count(),
+            (uint32_t)datastore_->audit_queue_size(),
+            selective_auditor_ ? (uint32_t)selective_auditor_->runner_count() : 0,
+            issue_counters.find(Severity::CRITICAL)->second,
+            issue_counters.find(Severity::HIGH)->second,
+            issue_counters.find(Severity::MODERATE)->second,
+            issue_counters.find(Severity::LOW)->second,
+            (uint32_t)objects_finder_->num_objects_found(),
+            (uint32_t)objects_finder_->pending_urls_count(),
+            (uint32_t)objects_finder_->test_urls_queue_count());
+      } else {
+        const auto& issue_counters = datastore_->issue_count_per_severity();
+        printf(
+            "%s%s Plusfish scan statistics%s\n\n"
+            "        Request Queue : %u running, %u pending, %u done\n"
+            "          Audit Queue : %u pending, %u runners\n"
+            "               Issues : %u critical, %u high, %u medium, %u low\n",
+            kTermClearScreen, kTermBold, kTermColorReset,
+            (uint32_t)http_client_->active_requests_count(),
+            (uint32_t)http_client_->schedule_queue_size(),
+            (uint32_t)http_client_->requests_performed_count(),
+            (uint32_t)datastore_->audit_queue_size(),
+            selective_auditor_ ? (uint32_t)selective_auditor_->runner_count() : 0,
+            issue_counters.find(Severity::CRITICAL)->second,
+            issue_counters.find(Severity::HIGH)->second,
+            issue_counters.find(Severity::MODERATE)->second,
+            issue_counters.find(Severity::LOW)->second);
+      }
     }
 
     if (datastore_->probe_queue_size()) {
@@ -260,7 +280,9 @@ void Plusfish::Run() {
       }
     }
 
-    objects_finder_->ScheduleRequests(kMaxHiddenObjectsUrlsToSchedule);
+    if (objects_finder_) {
+      objects_finder_->ScheduleRequests(kMaxHiddenObjectsUrlsToSchedule);
+    }
 
     if (selective_auditor_ && datastore_->audit_queue_size() > 0 &&
         selective_auditor_->runner_count() < max_auditor_runners_) {
